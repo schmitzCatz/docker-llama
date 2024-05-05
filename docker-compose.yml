@@ -1,0 +1,49 @@
+services:
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"     
+    volumes:
+      - ./ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: webui
+    restart: always
+    depends_on:
+      - ollama
+      - stablediffusion
+    ports:
+      - 3000:8080
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - ./open-webui:/app/backend/data    
+  stablediffusion:
+    image: universonic/stable-diffusion-webui
+    container_name: stable_diffusion_ui
+    command: --no-half --no-half-vae --precision full --listen --api
+    restart: unless-stopped
+    ports:
+      - "3030:8080/tcp"
+    volumes:
+      - ./diffusion/inputs:/app/stable-diffusion-webui/inputs
+      - ./diffusion/textual_inversion_templates:/app/stable-diffusion-webui/textual_inversion_templates
+      - ./diffusion/embeddings:/app/stable-diffusion-webui/embeddings
+      - ./diffusion/extensions:/app/stable-diffusion-webui/extensions
+      - ./diffusion/models:/app/stable-diffusion-webui/models
+      - ./diffusion/localizations:/app/stable-diffusion-webui/localizations
+      - ./diffusion/outputs:/app/stable-diffusion-webui/outputs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
